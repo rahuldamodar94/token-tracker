@@ -10,7 +10,7 @@ redisClient.on("error", (err) => {
 });
 
 redisClient.on("connect", () => {
-     console.log("Redis connected");
+  console.log("Redis connected");
 });
 
 export async function connectRedis() {
