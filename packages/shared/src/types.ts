@@ -41,3 +41,13 @@ export interface BlockEvent {
   timestamp: number;
   transaction_count: number;
 }
+
+export interface RawTransfer {
+  tokenAddress: string;
+  from: string;
+  to: string;
+  value: string;
+  txHash: string;
+  blockNumber: number;
+  logIndex: number;
+}

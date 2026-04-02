@@ -21,4 +21,6 @@ export async function testConnection() {
   }
 }
 
+export { PoolClient } from "pg";
+
 export default pool;
