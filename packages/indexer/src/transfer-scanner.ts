@@ -76,3 +76,24 @@ export async function storeTransfers(
     values,
   );
 }
+
+export async function findNewTokens(
+  client: PoolClient,
+  transfers: RawTransfer[],
+  chainId: number,
+): Promise<string[]> {
+  if (transfers.length === 0) return [];
+
+  const uniqueAddresses = [...new Set(transfers.map((t) => t.tokenAddress))];
+
+  const result = await client.query(
+    `SELECT contract_address FROM tokens WHERE chain_id = $1 AND contract_address = ANY($2)`,
+    [chainId, uniqueAddresses],
+  );
+
+  const existingAddresses = new Set(
+    result.rows.map((r: any) => r.contract_address.trim()),
+  );
+
+  return uniqueAddresses.filter((addr) => !existingAddresses.has(addr));
+}

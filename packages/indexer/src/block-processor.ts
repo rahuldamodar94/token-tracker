@@ -5,7 +5,12 @@ import {
   BlockEvent,
   RawTransfer,
 } from "@token-tracker/shared";
-import { scanTransfers, storeTransfers } from "./transfer-scanner";
+import {
+  findNewTokens,
+  scanTransfers,
+  storeTransfers,
+} from "./transfer-scanner";
+import { addToDiscoveryQueue } from "./discovery-queue";
 
 const consumer = kafka.consumer({ groupId: "block-processors" });
 
@@ -42,10 +47,26 @@ export async function startBlockProcessor() {
         await client.query("BEGIN");
         await storeBlock(client, blockData);
         await storeTransfers(client, transfers, blockData.chain_id);
+
+        const newTokens = await findNewTokens(
+          client,
+          transfers,
+          blockData.chain_id,
+        );
+
+        await client.query("COMMIT");
+
+        if (newTokens.length > 0) {
+          addToDiscoveryQueue(
+            newTokens,
+            blockData.chain_id,
+            blockData.block_number,
+          );
+        }
+
         console.log(
           `Block ${blockData.block_number}: stored with ${transfers.length} transfers`,
         );
-        await client.query("COMMIT");
       } catch (error) {
         await client.query("ROLLBACK");
         console.error("Error processing block event:", error);
