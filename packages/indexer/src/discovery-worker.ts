@@ -44,19 +44,25 @@ const discoveryWorker = new Worker(
     const metadata = await fetchTokenMetadata(contractAddress);
     const { name, symbol, decimals } = metadata;
 
-    await pool.query(
+    const result = await pool.query(
       `INSERT INTO tokens (contract_address, chain_id, name, symbol, decimals, spam_score, status, discovered_at_block) VALUES(
-        $1, $2, $3, $4 , $5, 0, 'pending',$6) ON CONFLICT (chain_id, contract_address) DO NOTHING`,
+        $1, $2, $3, $4 , $5, 0, 'pending',$6) ON CONFLICT (chain_id, contract_address) DO NOTHING RETURNING contract_address`,
       [contractAddress, chainId, name, symbol, decimals, discoveredAtBlock],
     );
 
-    console.log(
-      `Discovered token: ${metadata.symbol || "unknown"} (${contractAddress.slice(0, 10)}...)`,
-    );
+    if (result.rows.length > 0) {
+      console.log(
+        `Discovered token: ${metadata.symbol || "unknown"} (${contractAddress.slice(0, 10)}...)`,
+      );
+    }
   },
   {
     connection,
     concurrency: 5,
+    limiter: {
+      max: 5,
+      duration: 1000,
+    },
   },
 );
 

@@ -23,6 +23,7 @@ export async function scanTransfers(
 
   for (const log of logs) {
     try {
+      if (log.topics.length < 3) continue;
       transfers.push({
         tokenAddress: log.address.toLowerCase(),
         from: parseAddress(log.topics[1]),

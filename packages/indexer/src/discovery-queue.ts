@@ -12,7 +12,7 @@ export const discoveryQueue = new Queue("discovery-queue", {
   connection,
   defaultJobOptions: {
     removeOnComplete: true,
-    removeOnFail: true,
+    removeOnFail: false,
     attempts: 3,
     backoff: {
       type: "exponential",
@@ -29,6 +29,7 @@ export async function addToDiscoveryQueue(
   const jobs = tokenAddresses.map((address) => ({
     name: "discover-token",
     data: { contractAddress: address, chainId, discoveredAtBlock: blockNumber },
+    opts: { jobId: `discover-${chainId}-${address}` },
   }));
   if (jobs.length > 0) {
     await discoveryQueue.addBulk(jobs);
