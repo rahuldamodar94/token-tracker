@@ -1,8 +1,8 @@
 {
-  "name": "shared",
+  "name": "@token-tracker/shared",
   "version": "1.0.0",
+  "main": "src/index.ts",
   "description": "",
-  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "migrate": "DATABASE_URL=postgresql://tokenscope:tokenscope@localhost:5555/tokenscope node-pg-migrate",

@@ -1,8 +1,8 @@
 {
-  "name": "indexer",
+  "name": "@token-tracker/indexer",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/index.ts",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -11,6 +11,15 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
-    "prettier": "^3.8.1"
+    "@types/node": "^25.5.0",
+    "prettier": "^3.8.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "bullmq": "^5.72.0",
+    "ethers": "^6.16.0",
+    "kafkajs": "^2.2.4",
+    "@token-tracker/shared": "*"
   }
 }

@@ -1,5 +1,5 @@
-import dotenv from 'dotenv';
-import path from 'path';
+import dotenv from "dotenv";
+import path from "path";
 
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
@@ -11,6 +11,7 @@ const config = {
   CHAIN_ID: parseInt(process.env.CHAIN_ID || "1", 10),
   NODE_ENV: process.env.NODE_ENV || "development",
   PORT: parseInt(process.env.PORT || "4000", 10),
+  START_BLOCK: parseInt(process.env.START_BLOCK || "0", 10),
 };
 
 export default config;

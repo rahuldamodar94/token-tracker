@@ -32,3 +32,12 @@ export interface Transfer {
   log_index: number;
   created_at: Date;
 }
+
+export interface BlockEvent {
+  block_number: number;
+  chain_id: number;
+  block_hash: string;
+  parent_hash: string;
+  timestamp: number;
+  transaction_count: number;
+}
