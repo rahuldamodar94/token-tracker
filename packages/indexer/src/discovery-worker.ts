@@ -2,6 +2,7 @@ import { Worker, Job } from "bullmq";
 import { Contract } from "ethers";
 import { pool, config } from "@token-tracker/shared";
 import provider from "./provider";
+import { scoreToken } from "./spam-scorer";
 
 const url = new URL(config.REDIS_URL);
 
@@ -52,8 +53,9 @@ const discoveryWorker = new Worker(
 
     if (result.rows.length > 0) {
       console.log(
-        `Discovered token: ${metadata.symbol || "unknown"} (${contractAddress.slice(0, 10)}...)`,
+        `Discovered token: ${metadata.symbol || "unknown"} (${contractAddress}...)`,
       );
+      await scoreToken(contractAddress, chainId);
     }
   },
   {
