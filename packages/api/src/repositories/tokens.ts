@@ -3,7 +3,8 @@ import { pool, PaginationParams } from "@token-tracker/shared";
 export async function getAllTokens({ page, limit, sort }: PaginationParams) {
   const offset = (page - 1) * limit;
   const result = await pool.query(
-    `SELECT *, COUNT(*) OVER() AS total_count
+    `SELECT contract_address, chain_id, name, symbol, decimals, spam_score, status,
+            COUNT(*) OVER() AS total_count
      FROM tokens
      ORDER BY created_at ${sort === "asc" ? "ASC" : "DESC"}
      LIMIT $1 OFFSET $2`,
@@ -22,7 +23,8 @@ export async function getAllTokensByChainId(
 ) {
   const offset = (page - 1) * limit;
   const result = await pool.query(
-    `SELECT *, COUNT(*) OVER() AS total_count
+    `SELECT contract_address, chain_id, name, symbol, decimals, spam_score, status,
+            COUNT(*) OVER() AS total_count
      FROM tokens
      WHERE chain_id = $1
      ORDER BY created_at ${sort === "asc" ? "ASC" : "DESC"}
@@ -38,7 +40,8 @@ export async function getAllTokensByChainId(
 
 export async function getTokenByAddress(chainId: number, address: string) {
   const result = await pool.query(
-    `SELECT * FROM tokens WHERE chain_id = $1 AND contract_address = $2`,
+    `SELECT contract_address, chain_id, name, symbol, decimals, spam_score, status
+     FROM tokens WHERE chain_id = $1 AND contract_address = $2`,
     [chainId, address],
   );
 
@@ -52,7 +55,8 @@ export async function getAllTransfersByTokenAddress(
 ) {
   const offset = (page - 1) * limit;
   const result = await pool.query(
-    `SELECT *, COUNT(*) OVER() AS total_count
+    `SELECT token_address, chain_id, from_address, to_address, value, tx_hash, block_number,
+            COUNT(*) OVER() AS total_count
      FROM transfers
      WHERE chain_id = $1 AND token_address = $2
      ORDER BY created_at ${sort === "asc" ? "ASC" : "DESC"}

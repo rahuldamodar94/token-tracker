@@ -15,7 +15,11 @@ import {
 
 const router = Router();
 
-router.get("/", validate({ query: paginationQuerySchema }), getAllTokensHandler);
+router.get(
+  "/",
+  validate({ query: paginationQuerySchema }),
+  getAllTokensHandler,
+);
 
 router.get(
   "/:chainId",
@@ -31,7 +35,10 @@ router.get(
 
 router.get(
   "/:chainId/:address/transfers",
-  validate({ params: chainIdAndAddressParamsSchema, query: paginationQuerySchema }),
+  validate({
+    params: chainIdAndAddressParamsSchema,
+    query: paginationQuerySchema,
+  }),
   getAllTransfersByTokenAddressHandler,
 );
 
