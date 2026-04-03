@@ -1,5 +1,6 @@
 import { Pool } from "pg";
 import config from "./config";
+import logger from "./logger";
 
 const pool = new Pool({
   connectionString: config.DATABASE_URL,
@@ -9,15 +10,15 @@ const pool = new Pool({
 });
 
 pool.on("error", (err) => {
-  console.error("Unexpected error on idle client", err);
+  logger.error("Unexpected error on idle client", err);
 });
 
 export async function testConnection() {
   try {
     await pool.query("SELECT NOW()");
-    console.log("Database connection successful");
+    logger.info("Database connection successful");
   } catch (err) {
-    console.error("Database connection error", err);
+    logger.error("Database connection error", err);
   }
 }
 

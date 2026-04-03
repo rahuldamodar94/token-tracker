@@ -1,10 +1,10 @@
-import { kafka, BlockEvent } from "@token-tracker/shared";
+import { kafka, BlockEvent, logger } from "@token-tracker/shared";
 
 const producer = kafka.producer();
 
 export async function connectProducer() {
   await producer.connect();
-  console.log("Kafka producer connected");
+  logger.info("Kafka producer connected");
 }
 
 export async function publishBlock(block: BlockEvent) {
@@ -21,5 +21,5 @@ export async function publishBlock(block: BlockEvent) {
 
 export async function disconnectProducer() {
   await producer.disconnect();
-  console.log("Kafka producer disconnected");
+  logger.info("Kafka producer disconnected");
 }

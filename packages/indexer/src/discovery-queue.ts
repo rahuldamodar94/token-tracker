@@ -1,5 +1,5 @@
 import { Queue } from "bullmq";
-import { config } from "@token-tracker/shared";
+import { config, logger } from "@token-tracker/shared";
 
 const url = new URL(config.REDIS_URL);
 
@@ -33,6 +33,6 @@ export async function addToDiscoveryQueue(
   }));
   if (jobs.length > 0) {
     await discoveryQueue.addBulk(jobs);
-    console.log(`Queued ${jobs.length} tokens for discovery`);
+    logger.info(`Queued ${jobs.length} tokens for discovery`);
   }
 }

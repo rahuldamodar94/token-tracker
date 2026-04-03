@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { logger } from "@token-tracker/shared";
 import { AppError } from "../utils/errors";
 
 export function errorHandler(
@@ -16,7 +17,7 @@ export function errorHandler(
     return;
   }
 
-  console.error(err);
+  logger.error(err);
   res.status(500).json({
     data: null,
     message: "Internal server error",

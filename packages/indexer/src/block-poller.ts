@@ -1,5 +1,5 @@
 import provider from "./provider";
-import { config, pool } from "@token-tracker/shared";
+import { config, pool, logger } from "@token-tracker/shared";
 import { publishBlock } from "./kafka-producer";
 
 async function getLastProcessedBlock(): Promise<number> {
@@ -33,7 +33,7 @@ export async function startBlockPolling() {
   const lastfromDb = await getLastProcessedBlock();
   let lastProcessedBlock = lastfromDb > 0 ? lastfromDb : config.START_BLOCK;
 
-  console.log(
+  logger.info(
     `Starting block polling from block number: ${lastProcessedBlock}`,
   );
 
@@ -41,7 +41,7 @@ export async function startBlockPolling() {
     try {
       const latestBlockNumber = await getLatestBlockNumber();
       if (latestBlockNumber < lastProcessedBlock) {
-        console.log(
+        logger.info(
           `Latest block number ${latestBlockNumber} is less than last processed block ${lastProcessedBlock}. Waiting...`,
         );
         await new Promise((resolve) => setTimeout(resolve, 12000));
@@ -51,24 +51,24 @@ export async function startBlockPolling() {
 
       const blockData = await fetchBlock(nextBlockNumber);
       if (!blockData) {
-        console.log(
+        logger.info(
           `Block data for block number ${nextBlockNumber} is null. Retrying...`,
         );
         await new Promise((resolve) => setTimeout(resolve, 10000));
         continue;
       }
       await publishBlock(blockData);
-      console.log(`Published block ${nextBlockNumber} to Kafka`);
+      logger.info(`Published block ${nextBlockNumber} to Kafka`);
       lastProcessedBlock = nextBlockNumber;
 
       if (latestBlockNumber - lastProcessedBlock > 1) {
-        console.log(
+        logger.info(
           `Catching up... Latest block: ${latestBlockNumber}, Last processed block: ${lastProcessedBlock}`,
         );
         await new Promise((resolve) => setTimeout(resolve, 100)); // Short delay to catch up faster
       }
     } catch (error) {
-      console.error(
+      logger.error(
         "Error occurred while fetching latest block number:",
         error,
       );

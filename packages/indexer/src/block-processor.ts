@@ -4,6 +4,7 @@ import {
   pool,
   BlockEvent,
   RawTransfer,
+  logger,
 } from "@token-tracker/shared";
 import {
   findNewTokens,
@@ -30,7 +31,7 @@ export async function storeBlock(client: PoolClient, block: BlockEvent) {
 export async function startBlockProcessor() {
   await consumer.connect();
   await consumer.subscribe({ topic: "block-events", fromBeginning: true });
-  console.log(
+  logger.info(
     "Block processor connected to Kafka and subscribed to block-events topic",
   );
 
@@ -64,12 +65,12 @@ export async function startBlockProcessor() {
           );
         }
 
-        console.log(
+        logger.info(
           `Block ${blockData.block_number}: stored with ${transfers.length} transfers`,
         );
       } catch (error) {
         await client.query("ROLLBACK");
-        console.error("Error processing block event:", error);
+        logger.error("Error processing block event:", error);
         throw error;
       } finally {
         await client.release();

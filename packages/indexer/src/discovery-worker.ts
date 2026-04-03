@@ -1,6 +1,6 @@
 import { Worker, Job } from "bullmq";
 import { Contract } from "ethers";
-import { pool, config } from "@token-tracker/shared";
+import { pool, config, logger } from "@token-tracker/shared";
 import provider from "./provider";
 import { scoreToken } from "./spam-scorer";
 
@@ -52,7 +52,7 @@ const discoveryWorker = new Worker(
     );
 
     if (result.rows.length > 0) {
-      console.log(
+      logger.info(
         `Discovered token: ${metadata.symbol || "unknown"} (${contractAddress}...)`,
       );
       await scoreToken(contractAddress, chainId);
@@ -69,7 +69,7 @@ const discoveryWorker = new Worker(
 );
 
 discoveryWorker.on("failed", (job, err) => {
-  console.error(
+  logger.error(
     `Job ${job?.id} failed after ${job?.attemptsMade} attempts:`,
     err,
   );

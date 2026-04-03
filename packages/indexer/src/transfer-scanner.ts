@@ -1,5 +1,5 @@
 import provider from "./provider";
-import { RawTransfer, PoolClient } from "@token-tracker/shared";
+import { RawTransfer, PoolClient, logger } from "@token-tracker/shared";
 import { TRANSFER_EVENT_TOPIC } from "./constants";
 import { trace } from "node:console";
 
@@ -34,7 +34,7 @@ export async function scanTransfers(
         logIndex: log.index,
       });
     } catch (error) {
-      console.error(
+      logger.error(
         `Skipping bad log at index ${log.index} in block ${blockNumber}:`,
         error,
       );

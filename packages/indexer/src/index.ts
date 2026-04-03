@@ -1,11 +1,11 @@
 import { connectProducer } from "./kafka-producer";
 import { startBlockProcessor } from "./block-processor";
 import { startBlockPolling } from "./block-poller";
-import { testConnection } from "@token-tracker/shared";
+import { testConnection, logger } from "@token-tracker/shared";
 import "./discovery-worker";
 
 async function main() {
-  console.log("Starting Token Tracker Indexer...");
+  logger.info("Starting Token Tracker Indexer...");
   await testConnection();
   await connectProducer();
   await startBlockProcessor();
@@ -13,6 +13,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("Error starting indexer:", error);
+  logger.error("Error starting indexer:", error);
   process.exit(1);
 });
