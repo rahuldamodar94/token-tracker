@@ -19,6 +19,7 @@ export async function testConnection() {
     logger.info("Database connection successful");
   } catch (err) {
     logger.error("Database connection error", err);
+    throw err;
   }
 }
 

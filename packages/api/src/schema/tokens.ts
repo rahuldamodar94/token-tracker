@@ -21,7 +21,7 @@ export const chainIdAndAddressParamsSchema = z.object({
 });
 
 export const paginationQuerySchema = z.object({
-  page: z.string().regex(/^\d+$/, "Page must be a positive integer").default("1").transform(Number).pipe(z.number().min(1)),
+  page: z.string().regex(/^\d+$/, "Page must be a positive integer").default("1").transform(Number).pipe(z.number().min(1).max(10000)),
   limit: z.string().regex(/^\d+$/, "Limit must be a positive integer").default("20").transform(Number).pipe(z.number().min(1).max(100)),
   sort: z.enum(["asc", "desc"]).default("desc"),
 });

@@ -9,11 +9,19 @@ interface TokenRow {
   spam_score: number;
 }
 
-const REAL_TOKENS: Record<string, string> = {
-  USDT: "0xdac17f958d2ee523a2206206994597c13d831ec7",
-  USDC: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-  WETH: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-  DAI: "0x6b175474e89094c44da98b954eedeac495271d0f",
+const REAL_TOKENS: Record<number, Record<string, string>> = {
+  1: {
+    USDT: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    USDC: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    WETH: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+    DAI: "0x6b175474e89094c44da98b954eedeac495271d0f",
+  },
+  137: {
+    USDT: "0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
+    USDC: "0x3c499c542cef5e3811e1192ce70d8cc03d5c3359",
+    WETH: "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619",
+    DAI: "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063",
+  },
 };
 
 function calculateSpamScore(token: TokenRow): number {
@@ -27,8 +35,9 @@ function calculateSpamScore(token: TokenRow): number {
   if (token.name && /[^\x00-\x7F]/.test(token.name)) score += 25;
   if (token.symbol && /[^\x00-\x7F]/.test(token.symbol)) score += 25;
 
-  if (token.symbol && REAL_TOKENS[token.symbol]) {
-    if (token.contract_address.trim() !== REAL_TOKENS[token.symbol]) {
+  const chainTokens = REAL_TOKENS[token.chain_id];
+  if (chainTokens && token.symbol && chainTokens[token.symbol]) {
+    if (token.contract_address.trim() !== chainTokens[token.symbol]) {
       score += 50;
     }
   }

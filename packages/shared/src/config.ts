@@ -3,6 +3,13 @@ import path from "path";
 
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
+const required = ["DATABASE_URL", "REDIS_URL", "ALCHEMY_API_KEY"] as const;
+for (const key of required) {
+  if (!process.env[key]) {
+    throw new Error(`Missing required environment variable: ${key}`);
+  }
+}
+
 const config = {
   DATABASE_URL: process.env.DATABASE_URL!,
   REDIS_URL: process.env.REDIS_URL!,

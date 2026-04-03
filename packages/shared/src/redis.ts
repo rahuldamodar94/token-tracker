@@ -30,7 +30,13 @@ export async function setCache(key: string, value: any, ttlSeconds?: number) {
 export async function getCache(key: string) {
   const value = await redisClient.get(key);
   if (value) {
-    return JSON.parse(value);
+    try {
+      return JSON.parse(value);
+    } catch {
+      logger.warn(`Corrupted cache key "${key}", deleting`);
+      await redisClient.del(key);
+      return null;
+    }
   }
   return null;
 }
