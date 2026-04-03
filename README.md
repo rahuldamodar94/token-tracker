@@ -67,7 +67,8 @@ Built as a production-style backend system: event-driven architecture, idempoten
 | Job Queue      | BullMQ (backed by Redis)            |
 | Database       | PostgreSQL 16                       |
 | Cache          | Redis 7                             |
-| API            | Express                             |
+| API            | Express 5                           |
+| Validation     | Zod                                 |
 | Migrations     | node-pg-migrate                     |
 | Infrastructure | Docker Compose                      |
 
@@ -94,7 +95,15 @@ token-tracker/
 │   │       ├── block-processor.ts Consumes events, writes to DB
 │   │       └── provider.ts       ethers.js JSON-RPC provider
 │   └── api/             @token-tracker/api
-│       └── src/                  Express REST API (planned)
+│       └── src/
+│           ├── index.ts          Entry point
+│           ├── app.ts            Express app setup (cors, helmet, routes)
+│           ├── controllers/      Request handlers (tokens.ts)
+│           ├── middleware/        Zod validation, error handler
+│           ├── repositories/     Database queries (tokens.ts)
+│           ├── routes/           Route definitions (tokens.ts)
+│           ├── schema/           Zod schemas (tokens.ts)
+│           └── utils/            Response helpers, error classes
 ```
 
 Monorepo managed with npm workspaces. The shared package is consumed by both the indexer and API via `@token-tracker/shared`.
@@ -133,6 +142,9 @@ cd packages/shared && npm run migrate:up && cd ../..
 ```bash
 # Start the indexer
 cd packages/indexer && npx ts-node src/index.ts
+
+# Start the API (separate terminal)
+cd packages/api && npx ts-node src/index.ts
 ```
 
 The indexer will connect to the database, Kafka, and start polling blocks from the configured `START_BLOCK`. You should see output like:
@@ -214,6 +226,44 @@ Every ERC-20 `Transfer` event log. Uniquely identified by the combination of cha
 **Indexes:** `(chain_id, token_address)`, `block_number`, `from_address`, `to_address`
 **Unique constraint:** `(chain_id, tx_hash, log_index)` — prevents duplicate event ingestion
 
+## API Endpoints
+
+Base URL: `http://localhost:4000`
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/tokens` | All tokens (paginated) |
+| `GET` | `/api/tokens/:chainId` | Tokens by chain (paginated) |
+| `GET` | `/api/tokens/:chainId/:address` | Single token |
+| `GET` | `/api/tokens/:chainId/:address/transfers` | Token transfers (paginated) |
+
+**Pagination query params** (available on paginated endpoints):
+
+| Param   | Default | Description                        |
+|---------|---------|------------------------------------|
+| `page`  | `1`     | Page number (min: 1)               |
+| `limit` | `20`    | Items per page (min: 1, max: 100)  |
+| `sort`  | `desc`  | Sort order (`asc` or `desc`)       |
+
+**Example response:**
+
+```json
+{
+  "data": [...],
+  "message": "Tokens fetched successfully",
+  "error": null,
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 95,
+    "totalPages": 5,
+    "hasNextPage": true
+  }
+}
+```
+
+Supported chain IDs: `1` (Ethereum), `137` (Polygon). Invalid chain IDs return a validation error.
+
 ## Design Decisions
 
 - **Idempotent writes everywhere.** `ON CONFLICT DO NOTHING` on blocks, unique constraints on transfers. Safe to replay Kafka topics or reprocess blocks without data corruption.
@@ -231,8 +281,8 @@ Every ERC-20 `Transfer` event log. Uniquely identified by the combination of cha
 - [x] Block poller with adaptive polling
 - [x] Kafka producer/consumer pipeline
 - [x] Block processor with idempotent writes
-- [ ] Transfer scanner (`eth_getLogs` integration)
-- [ ] Token discovery workers (BullMQ)
-- [ ] Spam detection scoring
+- [x] Transfer scanner (`eth_getLogs` integration)
+- [x] Token discovery workers (BullMQ)
+- [x] Spam detection scoring
+- [x] REST API with Zod validation and pagination
 - [ ] Reorg detection and rollback
-- [ ] REST API

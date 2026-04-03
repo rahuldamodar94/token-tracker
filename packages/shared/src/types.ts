@@ -51,3 +51,17 @@ export interface RawTransfer {
   blockNumber: number;
   logIndex: number;
 }
+
+export interface PaginationParams {
+  page: number;
+  limit: number;
+  sort: "asc" | "desc";
+}
+
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+}

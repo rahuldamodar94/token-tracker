@@ -18,7 +18,7 @@ Monorepo with npm workspaces. Three packages:
 
 - `packages/shared` (`@token-tracker/shared`) — DB pool, Redis client, Kafka instance, types, config, migrations
 - `packages/indexer` (`@token-tracker/indexer`) — Block poller, Kafka producer/consumer, transfer scanner, token discovery, spam detection
-- `packages/api` (`@token-tracker/api`) — Express REST API
+- `packages/api` (`@token-tracker/api`) — Express 5 REST API with Zod validation, pagination, error handling
 
 Indexer and API are separate processes. Indexer watches the chain and stores data. API serves data.
 
@@ -29,17 +29,28 @@ Indexer and API are separate processes. Indexer watches the chain and stores dat
 - ethers.js for blockchain interaction (JSON-RPC via Alchemy)
 - KafkaJS for event pipeline, BullMQ for job queues
 - node-pg-migrate for database migrations (CommonJS format with exports.up/exports.down)
+- Zod for request validation, cors, helmet
 
 ## Code Conventions
 
 - Import from shared package: `import { pool, config, kafka } from "@token-tracker/shared"`
 - Use `exports.up`/`exports.down` in migrations (CommonJS, not ES modules)
-- PostgreSQL BIGINT returns as string from pg driver — always parseInt() when reading block numbers
+- PostgreSQL BIGINT returns as string from pg driver — always `parseInt(value, 10)` when reading block numbers
 - CHAR(66) for block/tx hashes, CHAR(42) for addresses, NUMERIC for token values
 - Composite primary keys: (chain_id, block_number) for blocks, (chain_id, contract_address) for tokens
 - chain_id is baked into every table, every query, every API route
 - No ORMs — raw SQL via pg pool with parameterized queries
 - Console.log for now — Winston structured logging will be added later
+- API follows controller → repository pattern (no service layer)
+- Zod schemas validate params/query in middleware, transformed values stored on `req.validated.params` / `req.validated.query` (body stays on `req.body`)
+- Schemas use `.transform(Number)` for coercion — no `parseInt()` or type casts in controllers
+- Exported types (`ChainIdParams`, `PaginationQuery`, etc.) from schema files via `z.infer` — controllers import and cast with `as Type`
+- Pagination enforces bounds: page >= 1, limit 1–100
+- Express 5 catches async errors automatically — no try/catch or next() needed in controllers
+- `sendSuccess()` helper for consistent response format
+- Shared interfaces (PaginationParams, PaginationMeta) live in `@token-tracker/shared` types
+- PaginationMeta includes: page, limit, total, totalPages, hasNextPage
+- Supported chain IDs validated via Zod enum (currently 1 and 137)
 
 ## Database Schema
 
@@ -63,4 +74,8 @@ Block Poller (ethers.js) → Kafka (block-events topic) → Block Processor (sto
 ## Current Status
 
 - Block poller → Kafka → Block processor pipeline: WORKING
-- Next: Transfer scanner, token discovery workers, spam detection, REST API
+- Transfer scanner: WORKING
+- Token discovery (BullMQ): WORKING
+- Spam detection: WORKING
+- REST API with pagination: WORKING
+- Remaining: Reorg rollback logic
