@@ -40,6 +40,7 @@ export interface BlockEvent {
   parent_hash: string;
   timestamp: number;
   transaction_count: number;
+  latestBlockOnChain: number;
 }
 
 export interface RawTransfer {

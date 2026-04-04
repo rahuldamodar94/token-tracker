@@ -1,8 +1,10 @@
 import provider from "./provider";
-import { config, pool, logger } from "@token-tracker/shared";
+import { config, pool, logger, BlockEvent } from "@token-tracker/shared";
 import { publishBlock } from "./kafka-producer";
 
-async function getLastProcessedBlock(): Promise<number> {
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+export async function getLastProcessedBlock(): Promise<number> {
   const result = await pool.query(
     "SELECT MAX(block_number) as last_block FROM blocks WHERE chain_id = $1",
     [config.CHAIN_ID],
@@ -10,11 +12,11 @@ async function getLastProcessedBlock(): Promise<number> {
   return parseInt(result.rows[0]?.last_block) || 0;
 }
 
-async function getLatestBlockNumber(): Promise<number> {
+export async function getLatestBlockNumber(): Promise<number> {
   return await provider.getBlockNumber();
 }
 
-async function fetchBlock(blockNumber: number) {
+export async function fetchBlock(blockNumber: number) {
   const block = await provider.getBlock(blockNumber);
   if (!block) {
     return null;
@@ -30,49 +32,47 @@ async function fetchBlock(blockNumber: number) {
 }
 
 export async function startBlockPolling() {
-  const lastfromDb = await getLastProcessedBlock();
-  let lastProcessedBlock = lastfromDb > 0 ? lastfromDb : config.START_BLOCK;
-
   logger.info(
-    `Starting block polling from block number: ${lastProcessedBlock}`,
+    `Starting block polling from block number: ${config.START_BLOCK}`,
   );
 
   while (true) {
     try {
+      const lastfromDb = await getLastProcessedBlock();
+      const lastProcessedBlock =
+        lastfromDb > 0 ? lastfromDb : config.START_BLOCK;
       const latestBlockNumber = await getLatestBlockNumber();
       if (latestBlockNumber < lastProcessedBlock) {
         logger.info(
           `Latest block number ${latestBlockNumber} is less than last processed block ${lastProcessedBlock}. Waiting...`,
         );
-        await new Promise((resolve) => setTimeout(resolve, 12000));
+        await sleep(12000);
         continue;
       }
       const nextBlockNumber = lastProcessedBlock + 1;
 
-      const blockData = await fetchBlock(nextBlockNumber);
-      if (!blockData) {
+      const rawBlockData = await fetchBlock(nextBlockNumber);
+      if (!rawBlockData) {
         logger.info(
           `Block data for block number ${nextBlockNumber} is null. Retrying...`,
         );
-        await new Promise((resolve) => setTimeout(resolve, 10000));
+        await sleep(10000);
         continue;
       }
+      const blockData: BlockEvent = {
+        ...rawBlockData,
+        latestBlockOnChain: latestBlockNumber,
+      };
       await publishBlock(blockData);
       logger.info(`Published block ${nextBlockNumber} to Kafka`);
-      lastProcessedBlock = nextBlockNumber;
 
       if (latestBlockNumber - lastProcessedBlock > 1) {
-        logger.info(
-          `Catching up... Latest block: ${latestBlockNumber}, Last processed block: ${lastProcessedBlock}`,
-        );
-        await new Promise((resolve) => setTimeout(resolve, 100)); // Short delay to catch up faster
+        logger.info(`Catching up: ${latestBlockNumber - lastProcessedBlock} blocks behind`);
+        await sleep(100);
       }
     } catch (error) {
-      logger.error(
-        "Error occurred while fetching latest block number:",
-        error,
-      );
-      await new Promise((resolve) => setTimeout(resolve, 5000)); // Wait before retrying on error
+      logger.error("Error occurred while fetching latest block number:", error);
+      await sleep(5000);
     }
   }
 }
