@@ -28,6 +28,8 @@ RUN npm install --omit=dev
 # Copy compiled output
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/packages/api/dist ./packages/api/dist
+# Copy migrations
+COPY --from=builder /app/packages/shared/migrations ./packages/shared/migrations
 
 # Copy route source files for swagger-jsdoc (reads JSDoc annotations at runtime)
 COPY --from=builder /app/packages/api/src/routes ./packages/api/src/routes
