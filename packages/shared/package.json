@@ -5,7 +5,7 @@
   "description": "",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "migrate": "DATABASE_URL=postgresql://tokenscope:tokenscope@localhost:5555/tokenscope node-pg-migrate",
+    "migrate": "node-pg-migrate",
     "migrate:up": "npm run migrate -- up",
     "migrate:down": "npm run migrate -- down",
     "migrate:create": "npm run migrate -- create"
