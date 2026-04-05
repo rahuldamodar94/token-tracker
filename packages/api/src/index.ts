@@ -1,6 +1,5 @@
 import app from "./app";
-import { config, connectRedis, logger } from "@token-tracker/shared";
-import pool from "@token-tracker/shared/src/db";
+import { config, connectRedis, logger, pool } from "@token-tracker/shared";
 
 const PORT = config.PORT || 4000;
 

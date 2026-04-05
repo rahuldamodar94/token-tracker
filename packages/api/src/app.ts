@@ -3,8 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import tokenRoutes from "./routes/tokens";
 import { errorHandler } from "./middleware/error-handler";
-import pool from "@token-tracker/shared/src/db";
-import { redisClient } from "@token-tracker/shared";
+import { pool, redisClient } from "@token-tracker/shared";
 import swaggerUI from "swagger-ui-express";
 import swaggerSpec from "./swagger";
 
