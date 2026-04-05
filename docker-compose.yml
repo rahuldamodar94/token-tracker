@@ -9,6 +9,23 @@ services:
       POSTGRES_DB: tokenscope
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tokenscope"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+    command: sh -c "cd ../shared && npm run migrate:up"
+    environment:
+      - DATABASE_URL=postgresql://tokenscope:tokenscope@postgres:5432/tokenscope
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
   redis:
     image: redis:7
