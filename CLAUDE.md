@@ -18,7 +18,7 @@ Monorepo with npm workspaces. Three packages:
 
 - `packages/shared` (`@token-tracker/shared`) — DB pool, Redis client, Kafka instance, types, config, migrations
 - `packages/indexer` (`@token-tracker/indexer`) — Block poller, Kafka producer/consumer, transfer scanner, token discovery, spam detection
-- `packages/api` (`@token-tracker/api`) — Express 5 REST API with Zod validation, pagination, error handling
+- `packages/api` (`@token-tracker/api`) — Express 5 REST API with Zod validation, pagination, Redis caching, Swagger docs at `/api/docs`
 
 Indexer and API are separate processes. Indexer watches the chain and stores data. API serves data.
 
@@ -29,7 +29,7 @@ Indexer and API are separate processes. Indexer watches the chain and stores dat
 - ethers.js for blockchain interaction (JSON-RPC via Alchemy)
 - KafkaJS for event pipeline, BullMQ for job queues
 - node-pg-migrate for database migrations (CommonJS format with exports.up/exports.down)
-- Zod for request validation, cors, helmet
+- Zod for request validation, cors, helmet, swagger-jsdoc + swagger-ui-express for API docs
 
 ## Code Conventions
 
@@ -40,7 +40,7 @@ Indexer and API are separate processes. Indexer watches the chain and stores dat
 - Composite primary keys: (chain_id, block_number) for blocks, (chain_id, contract_address) for tokens
 - chain_id is baked into every table, every query, every API route
 - No ORMs — raw SQL via pg pool with parameterized queries
-- Console.log for now — Winston structured logging will be added later
+- Winston structured logging via `logger` from shared package
 - API follows controller → repository pattern (no service layer)
 - Zod schemas validate params/query in middleware, transformed values stored on `req.validated.params` / `req.validated.query` (body stays on `req.body`)
 - Schemas use `.transform(Number)` for coercion — no `parseInt()` or type casts in controllers
@@ -51,6 +51,8 @@ Indexer and API are separate processes. Indexer watches the chain and stores dat
 - Shared interfaces (PaginationParams, PaginationMeta) live in `@token-tracker/shared` types
 - PaginationMeta includes: page, limit, total, totalPages, hasNextPage
 - Supported chain IDs validated via Zod enum (currently 1 and 137)
+- Redis caching (60s TTL) on GET endpoints via `getCache`/`setCache` from shared package
+- Swagger OpenAPI annotations live in route files (`packages/api/src/routes/*.ts`) — picked up by swagger-jsdoc
 
 ## Database Schema
 
@@ -78,4 +80,6 @@ Block Poller (ethers.js) → Kafka (block-events topic) → Block Processor (sto
 - Token discovery (BullMQ): WORKING
 - Spam detection: WORKING
 - REST API with pagination: WORKING
-- Remaining: Reorg rollback logic
+- Redis caching on API: WORKING
+- Swagger API docs: WORKING
+- Reorg detection and rollback: WORKING

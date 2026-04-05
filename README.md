@@ -69,6 +69,8 @@ Built as a production-style backend system: event-driven architecture, idempoten
 | Cache          | Redis 7                             |
 | API            | Express 5                           |
 | Validation     | Zod                                 |
+| Logging        | Winston                             |
+| API Docs       | swagger-jsdoc + swagger-ui-express  |
 | Migrations     | node-pg-migrate                     |
 | Infrastructure | Docker Compose                      |
 
@@ -98,10 +100,11 @@ token-tracker/
 │       └── src/
 │           ├── index.ts          Entry point
 │           ├── app.ts            Express app setup (cors, helmet, routes)
+│           ├── swagger.ts        OpenAPI spec generation (swagger-jsdoc)
 │           ├── controllers/      Request handlers (tokens.ts)
 │           ├── middleware/        Zod validation, error handler
 │           ├── repositories/     Database queries (tokens.ts)
-│           ├── routes/           Route definitions (tokens.ts)
+│           ├── routes/           Route definitions with Swagger annotations (tokens.ts)
 │           ├── schema/           Zod schemas (tokens.ts)
 │           └── utils/            Response helpers, error classes
 ```
@@ -230,12 +233,16 @@ Every ERC-20 `Transfer` event log. Uniquely identified by the combination of cha
 
 Base URL: `http://localhost:4000`
 
+Interactive Swagger docs: `http://localhost:4000/api/docs`
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/api/tokens` | All tokens (paginated) |
-| `GET` | `/api/tokens/:chainId` | Tokens by chain (paginated) |
-| `GET` | `/api/tokens/:chainId/:address` | Single token |
+| `GET` | `/api/tokens` | All tokens (paginated, cached) |
+| `GET` | `/api/tokens/:chainId` | Tokens by chain (paginated, cached) |
+| `GET` | `/api/tokens/:chainId/:address` | Single token (cached) |
 | `GET` | `/api/tokens/:chainId/:address/transfers` | Token transfers (paginated) |
+| `GET` | `/api/health-check` | Basic health check |
+| `GET` | `/api/health/ready` | Readiness check (DB + Redis) |
 
 **Pagination query params** (available on paginated endpoints):
 
@@ -264,6 +271,8 @@ Base URL: `http://localhost:4000`
 
 Supported chain IDs: `1` (Ethereum), `137` (Polygon). Invalid chain IDs return a validation error.
 
+GET endpoints are cached in Redis with a 60-second TTL. Subsequent requests within that window are served from cache.
+
 ## Design Decisions
 
 - **Idempotent writes everywhere.** `ON CONFLICT DO NOTHING` on blocks, unique constraints on transfers. Safe to replay Kafka topics or reprocess blocks without data corruption.
@@ -285,4 +294,7 @@ Supported chain IDs: `1` (Ethereum), `137` (Polygon). Invalid chain IDs return a
 - [x] Token discovery workers (BullMQ)
 - [x] Spam detection scoring
 - [x] REST API with Zod validation and pagination
-- [ ] Reorg detection and rollback
+- [x] Redis caching on API endpoints (60s TTL)
+- [x] Swagger/OpenAPI documentation
+- [x] Winston structured logging
+- [x] Reorg detection and rollback
