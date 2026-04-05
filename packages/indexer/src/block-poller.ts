@@ -67,8 +67,10 @@ export async function startBlockPolling() {
       logger.info(`Published block ${nextBlockNumber} to Kafka`);
 
       if (latestBlockNumber - lastProcessedBlock > 1) {
-        logger.info(`Catching up: ${latestBlockNumber - lastProcessedBlock} blocks behind`);
-        await sleep(100);
+        logger.info(
+          `Catching up: ${latestBlockNumber - lastProcessedBlock} blocks behind`,
+        );
+        await sleep(1000);
       }
     } catch (error) {
       logger.error("Error occurred while fetching latest block number:", error);
