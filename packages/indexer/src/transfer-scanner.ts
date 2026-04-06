@@ -50,32 +50,42 @@ export async function storeTransfers(
 ) {
   if (transfers.length === 0) return;
 
-  const values: any[] = [];
-  const placeholders: string[] = [];
+  logger.info(
+    `Transfers to store: ${transfers.length} for block ${transfers[0].blockNumber}`,
+  );
 
-  transfers.forEach((t, i) => {
-    const offset = i * 8;
-    placeholders.push(
-      `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8})`,
-    );
-    values.push(
-      chainId,
-      t.tokenAddress,
-      t.from,
-      t.to,
-      t.value,
-      t.txHash,
-      t.blockNumber,
-      t.logIndex,
-    );
-  });
+  // Batch insert to handle large number of transfers without hitting parameter limits
+  const BATCH_SIZE = 8000;
+  for (let i = 0; i < transfers.length; i += BATCH_SIZE) {
+    const batch = transfers.slice(i, i + BATCH_SIZE);
 
-  await client.query(
-    `INSERT INTO transfers (chain_id, token_address, from_address, to_address, value, tx_hash, block_number, log_index)
+    const values: any[] = [];
+    const placeholders: string[] = [];
+
+    batch.forEach((t, i) => {
+      const offset = i * 8;
+      placeholders.push(
+        `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8})`,
+      );
+      values.push(
+        chainId,
+        t.tokenAddress,
+        t.from,
+        t.to,
+        t.value,
+        t.txHash,
+        t.blockNumber,
+        t.logIndex,
+      );
+    });
+
+    await client.query(
+      `INSERT INTO transfers (chain_id, token_address, from_address, to_address, value, tx_hash, block_number, log_index)
      VALUES ${placeholders.join(", ")}
      ON CONFLICT (chain_id, tx_hash, log_index) DO NOTHING`,
-    values,
-  );
+      values,
+    );
+  }
 }
 
 export async function findNewTokens(
