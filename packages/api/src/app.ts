@@ -6,6 +6,8 @@ import { errorHandler } from "./middleware/error-handler";
 import { pool, redisClient } from "@token-tracker/shared";
 import swaggerUI from "swagger-ui-express";
 import swaggerSpec from "./swagger";
+import register from "./metrics";
+import { metricsMiddleware } from "./middleware/metrics";
 
 const app = express();
 
@@ -18,6 +20,13 @@ app.use(
 
 app.use(helmet());
 app.use(express.json({ limit: "1mb" }));
+
+app.use(metricsMiddleware);
+
+app.get("/metrics", async (req, res) => {
+  res.set("Content-Type", register.contentType);
+  res.end(await register.metrics());
+});
 
 app.use("/api/docs", swaggerUI.serve, swaggerUI.setup(swaggerSpec));
 
