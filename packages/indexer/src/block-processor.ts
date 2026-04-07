@@ -154,6 +154,15 @@ export async function startBlockProcessor() {
           return;
         }
 
+        const existing = await client.query(
+          "SELECT 1 FROM blocks WHERE block_number = $1 AND chain_id = $2",
+          [blockData.block_number, blockData.chain_id],
+        );
+        if (existing.rows.length) {
+          logger.info(`Block ${blockData.block_number} already exists, skipping`);
+          return;
+        }
+
         if (await handleReorg(client, blockData)) return;
 
         const transfers: RawTransfer[] = await scanTransfers(
