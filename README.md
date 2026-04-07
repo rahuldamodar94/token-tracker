@@ -117,7 +117,7 @@ Monorepo managed with npm workspaces. The shared package is consumed by both the
 
 - Node.js >= 18
 - Docker and Docker Compose
-- An [Alchemy](https://www.alchemy.com/) API key (free tier works)
+- An [Alchemy](https://www.alchemy.com/) RPC (free tier works)
 
 ### Setup
 
@@ -128,7 +128,7 @@ cd token-tracker
 
 # Copy environment variables
 cp .env.example .env
-# Edit .env and add your ALCHEMY_API_KEY
+# Edit .env and add the ALCHEMY_RPC for your chain
 
 # Start infrastructure (Postgres, Redis, Kafka, Zookeeper)
 docker compose up -d
@@ -169,7 +169,7 @@ Stored block 24789701 in database
 | `DATABASE_URL`   | PostgreSQL connection string    | `postgresql://tokenscope:tokenscope@localhost:5555/tokenscope` |
 | `REDIS_URL`      | Redis connection string         | `redis://localhost:6666`                                    |
 | `KAFKA_BROKERS`  | Comma-separated broker list     | `localhost:9092`                                            |
-| `ALCHEMY_API_KEY`| Alchemy API key                 | —                                                           |
+| `ALCHEMY_RPC`    | Alchemy RPC                     | —                                                           |
 | `CHAIN_ID`       | EVM chain ID to index           | `1` (Ethereum mainnet)                                      |
 | `START_BLOCK`    | Block number to start indexing  | `0`                                                         |
 | `PORT`           | API server port                 | `4000`                                                      |
