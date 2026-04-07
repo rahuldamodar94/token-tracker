@@ -159,7 +159,9 @@ export async function startBlockProcessor() {
           [blockData.block_number, blockData.chain_id],
         );
         if (existing.rows.length) {
-          logger.info(`Block ${blockData.block_number} already exists, skipping`);
+          logger.info(
+            `Block ${blockData.block_number} already exists, skipping`,
+          );
           return;
         }
 
@@ -181,11 +183,18 @@ export async function startBlockProcessor() {
 
         await client.query("COMMIT");
 
-        if (newTokens.length > 0) {
-          addToDiscoveryQueue(
-            newTokens,
-            blockData.chain_id,
-            blockData.block_number,
+        try {
+          if (newTokens.length > 0) {
+            await addToDiscoveryQueue(
+              newTokens,
+              blockData.chain_id,
+              blockData.block_number,
+            );
+          }
+        } catch (error) {
+          logger.error(
+            `Error adding new tokens to discovery queue for block: ${blockData.block_number}`,
+            error,
           );
         }
 
