@@ -60,7 +60,7 @@ services:
       - DATABASE_URL=postgresql://tokenscope:tokenscope@postgres:5432/tokenscope
       - REDIS_URL=redis://redis:6379
       - KAFKA_BROKERS=kafka:9093
-      - ALCHEMY_API_KEY=${ALCHEMY_API_KEY}
+      - ALCHEMY_RPC=${ALCHEMY_RPC}
       - CHAIN_ID=${CHAIN_ID:-1}
       - START_BLOCK=${START_BLOCK:-0}
     depends_on:
@@ -78,7 +78,7 @@ services:
       - DATABASE_URL=postgresql://tokenscope:tokenscope@postgres:5432/tokenscope
       - REDIS_URL=redis://redis:6379
       - KAFKA_BROKERS=kafka:9093
-      - ALCHEMY_API_KEY=${ALCHEMY_API_KEY}
+      - ALCHEMY_RPC=${ALCHEMY_RPC}
       - PORT=4000
     depends_on:
       - postgres

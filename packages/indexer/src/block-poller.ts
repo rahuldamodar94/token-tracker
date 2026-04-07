@@ -12,23 +12,56 @@ export async function getLastProcessedBlock(): Promise<number> {
   return parseInt(result.rows[0]?.last_block) || 0;
 }
 
-export async function getLatestBlockNumber(): Promise<number> {
-  return await provider.getBlockNumber();
+export async function getLatestBlockNumber(retries = 3): Promise<number> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      return await provider.getBlockNumber();
+    } catch (error) {
+      logger.error(
+        `RPC error fetching latest block number (attempt ${attempt}/${retries}):`,
+        error,
+      );
+    }
+    if (attempt < retries) {
+      const delay = 1000 * Math.pow(2, attempt - 1);
+      logger.warn(
+        `Retrying latest block number fetch in ${delay}ms (attempt ${attempt}/${retries})`,
+      );
+      await sleep(delay);
+    }
+  }
+  throw new Error("Failed to fetch latest block number after all retries");
 }
 
-export async function fetchBlock(blockNumber: number) {
-  const block = await provider.getBlock(blockNumber);
-  if (!block) {
-    return null;
+export async function fetchBlock(blockNumber: number, retries = 3) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const block = await provider.getBlock(blockNumber);
+      if (block) {
+        return {
+          block_number: block.number,
+          chain_id: config.CHAIN_ID,
+          block_hash: block.hash!,
+          parent_hash: block.parentHash,
+          timestamp: block.timestamp,
+          transaction_count: block.transactions.length,
+        };
+      }
+    } catch (error) {
+      logger.error(
+        `RPC error fetching block ${blockNumber} (attempt ${attempt}/${retries}):`,
+        error,
+      );
+    }
+    if (attempt < retries) {
+      const delay = 1000 * Math.pow(2, attempt - 1);
+      logger.warn(
+        `Retrying block ${blockNumber} in ${delay}ms (attempt ${attempt}/${retries})`,
+      );
+      await sleep(delay);
+    }
   }
-  return {
-    block_number: block.number,
-    chain_id: config.CHAIN_ID,
-    block_hash: block.hash!,
-    parent_hash: block.parentHash,
-    timestamp: block.timestamp,
-    transaction_count: block.transactions.length,
-  };
+  return null;
 }
 
 export async function startBlockPolling() {
@@ -36,11 +69,15 @@ export async function startBlockPolling() {
     `Starting block polling from block number: ${config.START_BLOCK}`,
   );
 
+  let lastPublishedBlock = 0;
+
   while (true) {
     try {
       const lastfromDb = await getLastProcessedBlock();
-      const lastProcessedBlock =
-        lastfromDb > 0 ? lastfromDb : config.START_BLOCK;
+      const lastProcessedBlock = Math.max(
+        lastfromDb > 0 ? lastfromDb : config.START_BLOCK - 1,
+        lastPublishedBlock,
+      );
       const latestBlockNumber = await getLatestBlockNumber();
       if (latestBlockNumber < lastProcessedBlock) {
         logger.info(
@@ -64,6 +101,7 @@ export async function startBlockPolling() {
         latestBlockOnChain: latestBlockNumber,
       };
       await publishBlock(blockData);
+      lastPublishedBlock = nextBlockNumber;
       logger.info(`Published block ${nextBlockNumber} to Kafka`);
 
       if (latestBlockNumber - lastProcessedBlock > 1) {

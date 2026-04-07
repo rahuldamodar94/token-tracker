@@ -8,7 +8,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "typecheck": "tsc --noEmit -p packages/shared/tsconfig.json && tsc --noEmit -p packages/indexer/tsconfig.json && tsc --noEmit -p packages/api/tsconfig.json"
   },
   "keywords": [],
   "author": "",
