@@ -30,32 +30,6 @@ export async function storeBlock(client: PoolClient, block: BlockEvent) {
   );
 }
 
-async function fetchBlockWithRetry(
-  blockNumber: number,
-  retries = 3,
-): Promise<ReturnType<typeof fetchBlock>> {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const block = await fetchBlock(blockNumber);
-      if (block) return block;
-    } catch (error) {
-      logger.error(
-        `RPC error fetching block ${blockNumber} (attempt ${attempt}/${retries}):`,
-        error,
-      );
-    }
-
-    if (attempt < retries) {
-      const delay = 1000 * Math.pow(2, attempt - 1);
-      logger.warn(
-        `Retrying block ${blockNumber} in ${delay}ms (attempt ${attempt}/${retries})`,
-      );
-      await sleep(delay);
-    }
-  }
-  return null;
-}
-
 async function checkForReorg(block: BlockEvent): Promise<number | null> {
   const previousBlockFromDb = await pool.query(
     "SELECT block_hash FROM blocks WHERE block_number = $1 AND chain_id = $2",
@@ -75,7 +49,7 @@ async function getForkPoint(
   block_number: number,
   chain_id: number,
 ): Promise<number> {
-  const blockFromChain = await fetchBlockWithRetry(block_number);
+  const blockFromChain = await fetchBlock(block_number);
   const dbResult = await pool.query(
     "SELECT block_hash FROM blocks WHERE block_number = $1 AND chain_id = $2",
     [block_number - 1, chain_id],
@@ -211,3 +185,5 @@ export async function startBlockProcessor() {
     },
   });
 }
+
+export default consumer;

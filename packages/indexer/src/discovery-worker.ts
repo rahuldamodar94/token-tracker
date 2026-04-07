@@ -74,3 +74,5 @@ discoveryWorker.on("failed", (job, err) => {
     err,
   );
 });
+
+export default discoveryWorker;

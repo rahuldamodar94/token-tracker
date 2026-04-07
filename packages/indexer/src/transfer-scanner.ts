@@ -12,35 +12,53 @@ function parseAddress(paddedAddress: string): string {
 
 export async function scanTransfers(
   blockNumber: number,
+  retries = 3,
 ): Promise<RawTransfer[]> {
-  const logs = await provider.getLogs({
-    fromBlock: blockNumber,
-    toBlock: blockNumber,
-    topics: [TRANSFER_EVENT_TOPIC],
-  });
-
-  const transfers: RawTransfer[] = [];
-
-  for (const log of logs) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      if (log.topics.length < 3) continue;
-      transfers.push({
-        tokenAddress: log.address.toLowerCase(),
-        from: parseAddress(log.topics[1]),
-        to: parseAddress(log.topics[2]),
-        value: log.data === "0x" ? "0" : BigInt(log.data).toString(),
-        txHash: log.transactionHash.toLowerCase(),
-        blockNumber: blockNumber,
-        logIndex: log.index,
+      const logs = await provider.getLogs({
+        fromBlock: blockNumber,
+        toBlock: blockNumber,
+        topics: [TRANSFER_EVENT_TOPIC],
       });
+
+      const transfers: RawTransfer[] = [];
+
+      for (const log of logs) {
+        try {
+          if (log.topics.length < 3) continue;
+          transfers.push({
+            tokenAddress: log.address.toLowerCase(),
+            from: parseAddress(log.topics[1]),
+            to: parseAddress(log.topics[2]),
+            value: log.data === "0x" ? "0" : BigInt(log.data).toString(),
+            txHash: log.transactionHash.toLowerCase(),
+            blockNumber: blockNumber,
+            logIndex: log.index,
+          });
+        } catch (error) {
+          logger.error(
+            `Skipping bad log at index ${log.index} in block ${blockNumber}:`,
+            error,
+          );
+        }
+      }
+      return transfers;
     } catch (error) {
       logger.error(
-        `Skipping bad log at index ${log.index} in block ${blockNumber}:`,
+        `RPC error fetching logs for block ${blockNumber} (attempt ${attempt}/${retries}):`,
         error,
       );
     }
+    if (attempt < retries) {
+      const delay = 1000 * Math.pow(2, attempt - 1);
+      logger.warn(
+        `Retrying log fetch for block ${blockNumber} in ${delay}ms (attempt ${attempt}/${retries})`,
+      );
+      await new Promise((r) => setTimeout(r, delay));
+    }
   }
-  return transfers;
+  return [];
 }
 
 export async function storeTransfers(
