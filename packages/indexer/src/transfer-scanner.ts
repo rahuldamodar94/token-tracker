@@ -58,7 +58,9 @@ export async function scanTransfers(
       await new Promise((r) => setTimeout(r, delay));
     }
   }
-  return [];
+  throw new Error(
+    `Failed to fetch transfer logs for block ${blockNumber} after ${retries} retries`,
+  );
 }
 
 export async function storeTransfers(

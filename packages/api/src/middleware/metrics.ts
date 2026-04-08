@@ -10,7 +10,7 @@ export function metricsMiddleware(
 
   res.on("finish", () => {
     const duration = (Date.now() - start) / 1000;
-    const route = req.route?.path || req.path;
+    const route = req.route?.path || "unmatched";
 
     httpRequestCounter.inc({
       method: req.method,
