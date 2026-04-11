@@ -16,12 +16,13 @@ services:
       retries: 5
 
   migrate:
-    build:
-      context: .
-      dockerfile: packages/api/Dockerfile
-    command: sh -c "cd ../shared && npm run migrate:up"
+    image: node:24-alpine
+    working_dir: /app/packages/shared
+    command: sh -c "npm install && npm run migrate:up"
     environment:
       - DATABASE_URL=postgresql://tokenscope:tokenscope@postgres:5432/tokenscope
+    volumes:
+      - ./packages/shared:/app/packages/shared
     depends_on:
       postgres:
         condition: service_healthy
@@ -31,6 +32,11 @@ services:
     image: redis:7
     ports:
       - "6666:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
@@ -51,6 +57,12 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     depends_on:
       - zookeeper
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   indexer:
     build:
@@ -64,16 +76,21 @@ services:
       - CHAIN_ID=${CHAIN_ID:-1}
       - START_BLOCK=${START_BLOCK:-0}
     depends_on:
-      - postgres
-      - redis
-      - kafka
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
 
   api:
     build:
       context: .
       dockerfile: packages/api/Dockerfile
+    expose:
+      - "9100" #metrics
     ports:
-      - "4000:4000"
+      - "4000:4000" #API
     environment:
       - DATABASE_URL=postgresql://tokenscope:tokenscope@postgres:5432/tokenscope
       - REDIS_URL=redis://redis:6379
@@ -81,15 +98,29 @@ services:
       - ALCHEMY_RPC=${ALCHEMY_RPC}
       - PORT=4000
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
    
   prometheus:
     image: prom/prometheus
-    ports:
-    - "9090:9090"
+    expose:
+    - "9090"
     volumes:
     - ./prometheus.yml:/etc/prometheus/prometheus.yml
 
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"       
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PWD}   
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:
+  grafana_data:

@@ -98,6 +98,7 @@ export const getTokenByAddressHandler = async (req: Request, res: Response) => {
   if (!result) {
     throw new AppError(404, "Token not found");
   }
+
   await setCache(cacheKey, result, 60);
   return sendSuccess(res, result, "Token fetched successfully");
 };

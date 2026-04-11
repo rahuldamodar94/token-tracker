@@ -17,6 +17,11 @@ import { fetchBlock } from "./block-poller";
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const consumer = kafka.consumer({ groupId: "block-processors" });
 
+consumer.on("consumer.crash", (event) => {
+  logger.error("Kafka consumer crashed", event.payload.error);
+  process.exit(1);
+});
+
 export async function storeBlock(client: PoolClient, block: BlockEvent) {
   await client.query(
     "INSERT INTO blocks ( block_number, chain_id, block_hash, parent_hash, status, indexed_at) VALUES ($1, $2, $3, $4, $5, NOW()) ON CONFLICT (block_number, chain_id) DO NOTHING",
@@ -79,7 +84,7 @@ async function handleReorg(
   client: PoolClient,
   blockData: BlockEvent,
 ): Promise<boolean> {
-  if (blockData.latestBlockOnChain - blockData.block_number >= 64) return false;
+  if (blockData.latestBlockOnChain - blockData.block_number > 64) return false;
 
   const forkPoint = await checkForReorg(blockData);
   if (forkPoint === null) return false;
@@ -176,7 +181,9 @@ export async function startBlockProcessor() {
           `Block ${blockData.block_number}: stored with ${transfers.length} transfers`,
         );
       } catch (error) {
-        await client.query("ROLLBACK");
+        try {
+          await client.query("ROLLBACK");
+        } catch {}
         logger.error("Error processing block event:", error);
         throw error;
       } finally {

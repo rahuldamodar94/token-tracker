@@ -15,6 +15,8 @@ const options = {
       },
     ],
   },
+  // Relative to process.cwd(). In dev: packages/api. In Docker: /app/packages/api.
+  // Source .ts files are copied to src/routes/ in the Docker image for swagger-jsdoc to read.
   apis: ["./src/routes/*.ts"],
 };
 

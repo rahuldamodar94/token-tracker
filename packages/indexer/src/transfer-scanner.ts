@@ -1,7 +1,6 @@
 import provider from "./provider";
 import { RawTransfer, PoolClient, logger } from "@token-tracker/shared";
 import { TRANSFER_EVENT_TOPIC } from "./constants";
-import { trace } from "node:console";
 
 function parseAddress(paddedAddress: string): string {
   // Topics are 32 bytes (64 hex chars), addresses are 20 bytes (40 hex chars)

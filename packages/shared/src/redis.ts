@@ -19,11 +19,15 @@ export async function connectRedis() {
 }
 
 export async function setCache(key: string, value: any, ttlSeconds?: number) {
-  const stringValue = JSON.stringify(value);
-  if (ttlSeconds) {
-    await redisClient.setEx(key, ttlSeconds, stringValue);
-  } else {
-    await redisClient.set(key, stringValue);
+  try {
+    const stringValue = JSON.stringify(value);
+    if (ttlSeconds !== undefined && ttlSeconds > 0) {
+      await redisClient.setEx(key, ttlSeconds, stringValue);
+    } else {
+      await redisClient.set(key, stringValue);
+    }
+  } catch (error) {
+    logger.warn(`Failed to set cache for key: ${key}`, error);
   }
 }
 

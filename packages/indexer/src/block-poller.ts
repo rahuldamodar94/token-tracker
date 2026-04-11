@@ -37,16 +37,17 @@ export async function fetchBlock(blockNumber: number, retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const block = await provider.getBlock(blockNumber);
-      if (block) {
-        return {
-          block_number: block.number,
-          chain_id: config.CHAIN_ID,
-          block_hash: block.hash!,
-          parent_hash: block.parentHash,
-          timestamp: block.timestamp,
-          transaction_count: block.transactions.length,
-        };
+      if (!block || !block.hash) {
+        return null;
       }
+      return {
+        block_number: block.number,
+        chain_id: config.CHAIN_ID,
+        block_hash: block.hash,
+        parent_hash: block.parentHash,
+        timestamp: block.timestamp,
+        transaction_count: block.transactions.length,
+      };
     } catch (error) {
       logger.error(
         `RPC error fetching block ${blockNumber} (attempt ${attempt}/${retries}):`,
@@ -91,7 +92,7 @@ export async function startBlockPolling() {
       const rawBlockData = await fetchBlock(nextBlockNumber);
       if (!rawBlockData) {
         logger.info(
-          `Block data for block number ${nextBlockNumber} is null. Retrying...`,
+          `Block data for block number ${nextBlockNumber} is not yet available. Retrying...`,
         );
         await sleep(10000);
         continue;
@@ -111,7 +112,7 @@ export async function startBlockPolling() {
         await sleep(1000);
       }
     } catch (error) {
-      logger.error("Error occurred while fetching latest block number:", error);
+      logger.error("Error in block polling loop:", error);
       await sleep(5000);
     }
   }

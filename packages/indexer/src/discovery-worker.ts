@@ -4,12 +4,7 @@ import { pool, config, logger } from "@token-tracker/shared";
 import provider from "./provider";
 import { scoreToken } from "./spam-scorer";
 
-const url = new URL(config.REDIS_URL);
-
-const connection = {
-  host: url.hostname,
-  port: parseInt(url.port || "6379"),
-};
+const connection = { url: config.REDIS_URL };
 
 const ERC20_ABI = [
   "function name() view returns (string)",

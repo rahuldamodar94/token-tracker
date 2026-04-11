@@ -1,12 +1,7 @@
 import { Queue } from "bullmq";
 import { config, logger } from "@token-tracker/shared";
 
-const url = new URL(config.REDIS_URL);
-
-const connection = {
-  host: url.hostname,
-  port: parseInt(url.port || "6379"),
-};
+const connection = { url: config.REDIS_URL };
 
 export const discoveryQueue = new Queue("discovery-queue", {
   connection,

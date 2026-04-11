@@ -10,15 +10,21 @@ for (const key of required) {
   }
 }
 
+function parseIntOrThrow(value: string, name: string): number {
+  const parsed = parseInt(value, 10);
+  if (isNaN(parsed)) throw new Error(`${name} must be a number, got: "${value}"`);
+  return parsed;
+}
+
 const config = {
   DATABASE_URL: process.env.DATABASE_URL!,
   REDIS_URL: process.env.REDIS_URL!,
   KAFKA_BROKERS: (process.env.KAFKA_BROKERS || "localhost:9092").split(","),
   ALCHEMY_RPC: process.env.ALCHEMY_RPC!,
-  CHAIN_ID: parseInt(process.env.CHAIN_ID || "1", 10),
+  CHAIN_ID: parseIntOrThrow(process.env.CHAIN_ID || "1", "CHAIN_ID"),
   NODE_ENV: process.env.NODE_ENV || "development",
-  PORT: parseInt(process.env.PORT || "4000", 10),
-  START_BLOCK: parseInt(process.env.START_BLOCK || "0", 10),
+  PORT: parseIntOrThrow(process.env.PORT || "4000", "PORT"),
+  START_BLOCK: parseIntOrThrow(process.env.START_BLOCK || "0", "START_BLOCK"),
 };
 
 export default config;

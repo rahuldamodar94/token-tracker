@@ -12,7 +12,8 @@ export async function publishBlock(block: BlockEvent) {
     topic: "block-events",
     messages: [
       {
-        key: String(block.block_number),
+        // Partition by chain_id to guarantee per-chain ordering (required for reorg detection)
+        key: String(block.chain_id),
         value: JSON.stringify(block),
       },
     ],
