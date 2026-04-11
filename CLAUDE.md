@@ -5,9 +5,10 @@ Real-time multi-chain ERC-20 token indexer with spam detection.
 ## Build and Run
 
 - Install: `npm install` (from root — npm workspaces)
-- Start Docker services: `docker compose up -d` (Postgres, Redis, Kafka, Zookeeper)
+- Start Docker services: `docker compose up -d` (Postgres, Redis, Kafka, Zookeeper, Prometheus, Grafana)
 - Run indexer: `cd packages/indexer && npx ts-node src/index.ts`
 - Run API: `cd packages/api && npx ts-node src/index.ts`
+- Typecheck: `npm test` (from root — runs tsc --noEmit across all packages)
 - Migrations: `cd packages/shared && npm run migrate:up`
 - Create migration: `cd packages/shared && npm run migrate:create -- <name>`
 - Connect to DB: `psql -h localhost -p 5555 -U tokenscope -d tokenscope`
@@ -30,6 +31,7 @@ Indexer and API are separate processes. Indexer watches the chain and stores dat
 - KafkaJS for event pipeline, BullMQ for job queues
 - node-pg-migrate for database migrations (CommonJS format with exports.up/exports.down)
 - Zod for request validation, cors, helmet, swagger-jsdoc + swagger-ui-express for API docs
+- prom-client for Prometheus metrics
 
 ## Code Conventions
 
@@ -67,11 +69,28 @@ Block Poller (ethers.js) → Kafka (block-events topic) → Block Processor (sto
 ## Key Design Decisions
 
 - Kafka for block event pipeline (decoupling, backpressure, replay capability)
+- Kafka partition key is `chain_id` — guarantees per-chain ordering (required for reorg detection)
 - BullMQ for token discovery jobs (retry with backoff, one-time tasks)
 - Blocks stored as "provisional" until 64 confirmations (reorg safety)
 - Reorg detection via parentHash verification on every new block
 - ON CONFLICT DO NOTHING for idempotent inserts
 - UNIQUE(chain_id, tx_hash, log_index) prevents duplicate transfer events
+- RPC calls (fetchBlock, getLatestBlockNumber, scanTransfers) have retry with exponential backoff
+- scanTransfers throws on total failure — block is not committed with missing transfers
+- setCache swallows errors — Redis failures don't crash API requests
+- Kafka consumer crash handler exits process for supervisor restart
+- API serves metrics on separate internal port (9100), not on the public API port
+- Graceful shutdown on SIGTERM/SIGINT for both indexer and API
+- Config validates numeric env vars at startup — fails fast on invalid values
+
+## Infrastructure
+
+- Docker Compose: Postgres, Redis, Kafka, Zookeeper, Prometheus, Grafana
+- Healthchecks on Postgres, Redis, and Kafka — services wait for healthy dependencies
+- Prometheus scrapes metrics from API on internal port 9100
+- Grafana (port 3000) with auth — reads from Prometheus
+- Multi-stage Dockerfiles for API and indexer
+- Lightweight migrate service (node:24-alpine with volume mount, not full API build)
 
 ## Current Status
 
@@ -83,3 +102,7 @@ Block Poller (ethers.js) → Kafka (block-events topic) → Block Processor (sto
 - Redis caching on API: WORKING
 - Swagger API docs: WORKING
 - Reorg detection and rollback: WORKING
+- Graceful shutdown (indexer + API): WORKING
+- Prometheus metrics: WORKING
+- Grafana dashboard: WORKING
+- Docker multi-stage builds: WORKING

@@ -71,8 +71,9 @@ Built as a production-style backend system: event-driven architecture, idempoten
 | Validation     | Zod                                 |
 | Logging        | Winston                             |
 | API Docs       | swagger-jsdoc + swagger-ui-express  |
+| Metrics        | prom-client + Prometheus + Grafana  |
 | Migrations     | node-pg-migrate                     |
-| Infrastructure | Docker Compose                      |
+| Infrastructure | Docker Compose, multi-stage builds  |
 
 ## Project Structure
 
@@ -94,15 +95,20 @@ token-tracker/
 │   │       ├── index.ts          Entry point
 │   │       ├── block-poller.ts   Polls chain for new blocks
 │   │       ├── kafka-producer.ts Publishes block events to Kafka
-│   │       ├── block-processor.ts Consumes events, writes to DB
+│   │       ├── block-processor.ts Consumes events, writes to DB (reorg detection, crash handler)
+│   │       ├── transfer-scanner.ts Scans transfer logs with retry
+│   │       ├── discovery-queue.ts  BullMQ queue for token discovery
+│   │       ├── discovery-worker.ts BullMQ worker for token metadata + spam scoring
+│   │       ├── spam-scorer.ts      Token spam detection scoring
 │   │       └── provider.ts       ethers.js JSON-RPC provider
 │   └── api/             @token-tracker/api
 │       └── src/
-│           ├── index.ts          Entry point
+│           ├── index.ts          Entry point (API + metrics server + graceful shutdown)
 │           ├── app.ts            Express app setup (cors, helmet, routes)
 │           ├── swagger.ts        OpenAPI spec generation (swagger-jsdoc)
+│           ├── metrics.ts        Prometheus registry and custom metrics
 │           ├── controllers/      Request handlers (tokens.ts)
-│           ├── middleware/        Zod validation, error handler
+│           ├── middleware/        Zod validation, error handler, metrics middleware
 │           ├── repositories/     Database queries (tokens.ts)
 │           ├── routes/           Route definitions with Swagger annotations (tokens.ts)
 │           ├── schema/           Zod schemas (tokens.ts)
@@ -174,6 +180,7 @@ Stored block 24789701 in database
 | `START_BLOCK`    | Block number to start indexing  | `0`                                                         |
 | `PORT`           | API server port                 | `4000`                                                      |
 | `NODE_ENV`       | Environment                     | `development`                                               |
+| `GRAFANA_PWD`    | Grafana admin password          | —                                                           |
 
 ## Database Schema
 
@@ -243,6 +250,7 @@ Interactive Swagger docs: `http://localhost:4000/api/docs`
 | `GET` | `/api/tokens/:chainId/:address/transfers` | Token transfers (paginated) |
 | `GET` | `/api/health-check` | Basic health check |
 | `GET` | `/api/health/ready` | Readiness check (DB + Redis) |
+| `GET` | `:9100/metrics` | Prometheus metrics (internal port) |
 
 **Pagination query params** (available on paginated endpoints):
 
@@ -277,7 +285,10 @@ GET endpoints are cached in Redis with a 60-second TTL. Subsequent requests with
 
 - **Idempotent writes everywhere.** `ON CONFLICT DO NOTHING` on blocks, unique constraints on transfers. Safe to replay Kafka topics or reprocess blocks without data corruption.
 - **Provisional block tracking.** New blocks are stored as `provisional` and only confirmed after 64 blocks. If a reorg is detected via `parent_hash` mismatch, affected blocks and their transfers can be rolled back.
-- **Kafka over direct processing.** The block poller doesn't write to the database. It publishes to Kafka, and a separate consumer handles persistence. This means we can independently scale consumers, replay events from any offset, and add new downstream processors without touching the poller.
+- **Kafka over direct processing.** The block poller doesn't write to the database. It publishes to Kafka, and a separate consumer handles persistence. This means we can independently scale consumers, replay events from any offset, and add new downstream processors without touching the poller. Partition key is `chain_id` to guarantee per-chain ordering (required for reorg detection).
+- **Retry with exponential backoff on all RPC calls.** `fetchBlock`, `getLatestBlockNumber`, and `scanTransfers` all retry up to 3 times. `scanTransfers` throws on total failure so the block is never committed with missing transfer data.
+- **Graceful shutdown.** Both indexer and API handle SIGTERM/SIGINT — Kafka consumer/producer disconnect, BullMQ workers drain, DB pool closes, HTTP servers stop accepting connections.
+- **Metrics on separate port.** Prometheus metrics served on internal port 9100, not on the public API port. Grafana (port 3000, auth-protected) reads from Prometheus.
 - **BullMQ for token discovery.** Token metadata resolution (`name()`, `symbol()`, `decimals()`) involves RPC calls that can fail or rate-limit. BullMQ gives us per-job retries with exponential backoff, concurrency control, and dead-letter handling — without complicating the main indexing pipeline.
 - **No ORM.** Raw parameterized SQL via `pg`. Full control over queries, no magic, no abstraction leaks. Every query is visible and auditable.
 - **Multi-chain from day one.** `chain_id` is baked into every table, every composite key, and every query. Adding a new chain is a config change, not a schema migration.
@@ -298,3 +309,8 @@ GET endpoints are cached in Redis with a 60-second TTL. Subsequent requests with
 - [x] Swagger/OpenAPI documentation
 - [x] Winston structured logging
 - [x] Reorg detection and rollback
+- [x] Graceful shutdown (indexer + API)
+- [x] Prometheus metrics + Grafana dashboards
+- [x] Docker multi-stage builds (API + indexer)
+- [x] Docker healthchecks (Postgres, Redis, Kafka)
+- [x] Kafka consumer crash detection
